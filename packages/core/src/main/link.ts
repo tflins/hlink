@@ -1,17 +1,13 @@
-import { ExecaSyncError, execa } from 'execa'
-import path from 'path'
 import { chalk, getDirBasePath } from '../utils/index.js'
 import fs from 'fs-extra'
+import path from 'path'
 import HLinkError, { ErrorCode } from '../core/HlinkError.js'
 
 const errorSuggestion: Record<string, ErrorCode> = {
-  'Invalid cross-device link': ErrorCode.CrossDeviceLink,
-  'Operation not permitted': ErrorCode.NotPermitted,
-  'File exists': ErrorCode.FileExists,
+  EXDEV: ErrorCode.CrossDeviceLink,
+  EPERM: ErrorCode.NotPermitted,
+  EEXIST: ErrorCode.FileExists,
 }
-const knownError = Object.keys(errorSuggestion) as Array<
-  keyof typeof errorSuggestion
->
 
 /**
  *
@@ -28,18 +24,16 @@ async function link(
   // 做硬链接
   try {
     await fs.ensureDir(originalDestPath)
-    await execa('ln', [sourceFile, originalDestPath])
+    await fs.link(
+      sourceFile,
+      path.join(originalDestPath, path.basename(sourceFile))
+    )
   } catch (e) {
-    if (typeof e === 'object' && e instanceof Error) {
-      const error = e as ExecaSyncError
-      if (error.signal === 'SIGINT') {
-        throw e
-      }
-      const findError = knownError.find(
-        (err: string) => (error.stderr || error.message).indexOf(err) > -1
-      )
-      if (findError) {
-        const errorCode = errorSuggestion[findError]
+    if (e instanceof Error) {
+      const error = e as NodeJS.ErrnoException
+      if (error.code && error.code in errorSuggestion) {
+        const errorCode =
+          errorSuggestion[error.code as keyof typeof errorSuggestion]
         throw new HLinkError(
           errorCode,
           `${chalk.gray(getDirBasePath(source, sourceFile))} ${chalk.cyan(
@@ -52,6 +46,8 @@ async function link(
       } else {
         throw e
       }
+    } else {
+      throw e
     }
   }
 }
