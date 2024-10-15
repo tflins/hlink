@@ -15,6 +15,7 @@
     "build": "rm -rf dist && run-p build:*",
     "build:client": "tsc && vite build",
     "preview": "node dist/index.js",
+    "start": "NODE_ENV=production node dist/start.js",
     "prepublishOnly": "npm run build",
     "build:server": "tsc --project ./server/tsconfig.json"
   },
@@ -33,7 +34,7 @@
     "execa": "^6.1.0",
     "exit-hook": "^3.0.0",
     "fs-extra": "^10",
-    "got": "^12.1.0",
+    "got": "12.1.0",
     "internal-ip": "^7.0.0",
     "koa": "^2.13.4",
     "koa-body": "^5.0.0",
